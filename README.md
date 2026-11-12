@@ -2,7 +2,7 @@
 
 API REST do ProAgenda. Cada profissional autenticado vê somente os próprios clientes, serviços e agendamentos.
 
-O Node.js roda na máquina. O Docker sobe somente o MySQL.
+O Node.js roda na máquina. O banco é PostgreSQL, no schema `pi_fran`. A conexão vem do `.env`.
 
 ## Stack
 
@@ -11,8 +11,8 @@ O Node.js roda na máquina. O Docker sobe somente o MySQL.
 | Node.js 18+ | Runtime da API |
 | Express 4 | Servidor HTTP e rotas |
 | Knex 3 | Migrations, seeds e consultas |
-| mysql2 | Driver MySQL |
-| MySQL 8.4 | Banco, no container `proagenda-mysql` |
+| pg | Driver PostgreSQL |
+| PostgreSQL 16 | Banco local no Docker, ou um Postgres remoto como o Supabase |
 | bcryptjs | Hash da senha; a senha nunca é gravada em texto |
 | jsonwebtoken | Sessão Bearer, válida por 7 dias |
 | cors | Chamadas do frontend em outra origem |
@@ -22,7 +22,7 @@ O Node.js roda na máquina. O Docker sobe somente o MySQL.
 ## Pré-requisitos
 
 - Node.js 18 ou superior e npm
-- Docker, com o daemon em execução
+- Docker, só se o PostgreSQL for o da máquina. Um banco remoto não precisa do Docker.
 
 ## Configuração
 
@@ -33,12 +33,14 @@ npm install
 copy .env.example .env
 ```
 
-O `.env.example` já aponta para o MySQL do `docker-compose.yml` (`127.0.0.1:3306`, banco, usuário e senha `proagenda`). Troque `JWT_SECRET` fora de um ambiente local.
+O `.env.example` aponta para o PostgreSQL local (`127.0.0.1:5432`, banco, usuário e senha `proagenda`, schema `pi_fran`). Para o Supabase, preencha host, usuário, senha, banco e `DB_SSL=true` só no `.env`. A senha não entra no código. Troque `JWT_SECRET` fora de um ambiente local.
 
 | Variável | Função |
 |---|---|
 | `PORT` | Porta da API. Padrão `3000` |
-| `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Conexão MySQL |
+| `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Conexão PostgreSQL |
+| `DB_SCHEMA` | Schema das tabelas. Padrão `pi_fran` |
+| `DB_SSL` | `true` para o Supabase. `false` no Postgres local |
 | `JWT_SECRET` | Chave de assinatura do token |
 | `JWT_EXPIRES_IN` | Validade do token. Padrão `7d` |
 | `EXPOSE_RESET_CODE` | `true` devolve o código OTP em `demoCode`, para o toast do frontend. Com envio de e-mail real, use `false` |
@@ -51,9 +53,9 @@ npm run db:setup
 npm run dev
 ```
 
-`db:up` sobe o MySQL 8.4 em `localhost:3306` e guarda os dados no volume `proagenda_mysql`. Espere o container ficar saudável antes do setup. `db:setup` aplica as migrations e grava a conta de demonstração. Os dois passos podem ser repetidos: a migration pula a tabela que já existe e o seed só insere a conta, o serviço, o cliente ou o horário que ainda não está no banco. `dev` reinicia a API quando um arquivo de `src` muda.
+Com o `.env` apontando para um Postgres remoto, pule o `db:up`. Esse comando sobe o PostgreSQL 16 local em `localhost:5432` e guarda os dados no volume `proagenda_postgres`. `db:setup` aplica as migrations no schema `pi_fran` e grava a conta de demonstração. Os dois passos podem ser repetidos: a migration pula a tabela que já existe e o seed só insere a conta, o serviço, o cliente ou o horário que ainda não está no banco. `dev` reinicia a API quando um arquivo de `src` muda.
 
-A API fica em `http://localhost:3000`. Se o MySQL não estiver no ar, o processo encerra e pede `npm run db:up`.
+A API fica em `http://localhost:3000`. Se o PostgreSQL não estiver acessível, o processo encerra.
 
 Para subir sem o modo watch:
 
@@ -98,7 +100,7 @@ Ordem das migrations:
 4. `agendamentos`
 5. `codigos_recuperacao` — OTP de recuperação de senha
 
-Para criar uma migration nova, com o MySQL no ar:
+Para criar uma migration nova, com o PostgreSQL acessível:
 
 ```powershell
 npx knex migrate:make nome_da_migration
@@ -110,7 +112,7 @@ npx knex migrate:make nome_da_migration
 |---|---|
 | `start` | `node src/index.js` |
 | `dev` | `node --watch src/index.js` |
-| `db:up` | `docker compose up -d mysql` |
+| `db:up` | `docker compose up -d postgres` |
 | `db:down` | `docker compose down` |
 | `migrate` | `knex migrate:latest` |
 | `migrate:rollback` | `knex migrate:rollback` |
@@ -125,7 +127,7 @@ A primeira migration cria `cadastro` com as colunas de base. O e-mail é único.
 |---|---|
 | nome, telefone, email, senha | Conta do profissional |
 | servico | Atividade profissional (o `role` do frontend) |
-| dia, horario | Mantidos no schema informado; a agenda não usa essas colunas |
+| dia, horario | Mantidos na tabela pedida; a agenda não usa essas colunas |
 
 As tabelas seguintes:
 

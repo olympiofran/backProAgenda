@@ -1,14 +1,16 @@
-exports.up = async function up(knex) {
-  if (await knex.schema.hasTable('agendamentos')) return;
+const schema = require('../src/config').db.schema;
 
-  await knex.schema.createTable('agendamentos', (table) => {
+exports.up = async function up(knex) {
+  if (await knex.schema.withSchema(schema).hasTable('agendamentos')) return;
+
+  await knex.schema.withSchema(schema).createTable('agendamentos', (table) => {
     table.increments('id').primary();
-    table.integer('cadastro_id').unsigned().notNullable()
-      .references('id').inTable('cadastro').onDelete('CASCADE').onUpdate('CASCADE');
-    table.integer('cliente_id').unsigned().nullable()
-      .references('id').inTable('clientes').onDelete('SET NULL').onUpdate('CASCADE');
-    table.integer('servico_id').unsigned().notNullable()
-      .references('id').inTable('servicos').onDelete('RESTRICT').onUpdate('CASCADE');
+    table.integer('cadastro_id').notNullable()
+      .references('id').inTable(`${schema}.cadastro`).onDelete('CASCADE').onUpdate('CASCADE');
+    table.integer('cliente_id').nullable()
+      .references('id').inTable(`${schema}.clientes`).onDelete('SET NULL').onUpdate('CASCADE');
+    table.integer('servico_id').notNullable()
+      .references('id').inTable(`${schema}.servicos`).onDelete('RESTRICT').onUpdate('CASCADE');
     table.string('cliente_nome', 100).nullable();
     table.date('data').notNullable();
     table.time('inicio').notNullable();
@@ -18,12 +20,9 @@ exports.up = async function up(knex) {
     table.text('observacoes').nullable();
     table.timestamp('criado_em').notNullable().defaultTo(knex.fn.now());
     table.index(['cadastro_id', 'data']);
-    table.charset('utf8mb4');
-    table.collate('utf8mb4_unicode_ci');
-    table.engine('InnoDB');
   });
 };
 
 exports.down = function down(knex) {
-  return knex.schema.dropTableIfExists('agendamentos');
+  return knex.schema.withSchema(schema).dropTableIfExists('agendamentos');
 };

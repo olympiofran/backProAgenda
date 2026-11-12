@@ -32,7 +32,9 @@ router.get('/', asyncHandler(async (req, res) => {
 
 router.post('/', asyncHandler(async (req, res) => {
   const data = readService(req.body);
-  const [id] = await db('servicos').insert({ ...data, cadastro_id: req.userId });
+  const inserted = await db('servicos').insert({ ...data, cadastro_id: req.userId }).returning('id');
+  const created = inserted[0];
+  const id = created && typeof created === 'object' ? created.id : created;
   const service = await db('servicos').where({ id }).first();
   res.status(201).json(mapService(service));
 }));

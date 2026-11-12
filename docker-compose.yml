@@ -1,25 +1,24 @@
 name: proagenda
 
 services:
-  mysql:
-    image: mysql:8.4
-    container_name: proagenda-mysql
+  postgres:
+    image: postgres:16
+    container_name: proagenda-postgres
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: proagenda
-      MYSQL_USER: proagenda
-      MYSQL_PASSWORD: proagenda
+      POSTGRES_DB: proagenda
+      POSTGRES_USER: proagenda
+      POSTGRES_PASSWORD: proagenda
     ports:
-      - "3306:3306"
+      - "5432:5432"
     volumes:
-      - proagenda_mysql:/var/lib/mysql
+      - proagenda_postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      test: ["CMD-SHELL", "pg_isready -U proagenda -d proagenda"]
       interval: 5s
       timeout: 5s
       retries: 20
-      start_period: 20s
+      start_period: 10s
 
 volumes:
-  proagenda_mysql:
+  proagenda_postgres:

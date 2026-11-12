@@ -54,8 +54,9 @@ function isoDate(base, addDays) {
 async function findOrCreate(knex, table, where, values) {
   const existing = await knex(table).where(where).first();
   if (existing) return existing;
-  const [id] = await knex(table).insert({ ...where, ...values });
-  return { id };
+  const inserted = await knex(table).insert({ ...where, ...values }).returning('id');
+  const row = inserted[0];
+  return { id: row && typeof row === 'object' ? row.id : row };
 }
 
 exports.seed = async function seed(knex) {

@@ -9,7 +9,7 @@ db.raw('select 1')
     });
   })
   .catch((err) => {
-    console.error('Não foi possível conectar ao MySQL. Suba o banco com: npm run db:up');
+    console.error('Não foi possível conectar ao PostgreSQL. Confira o .env ou suba o banco local com: npm run db:up');
     console.error(err.message);
     process.exit(1);
   });

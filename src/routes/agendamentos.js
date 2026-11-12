@@ -133,7 +133,7 @@ router.post('/', asyncHandler(async (req, res) => {
     const conflict = await findConflict(trx, { cadastroId: req.userId, ...schedule });
     if (conflict) throw conflictError(conflict);
 
-    const [id] = await trx('agendamentos').insert({
+    const inserted = await trx('agendamentos').insert({
       cadastro_id: req.userId,
       cliente_id: client ? client.id : null,
       servico_id: service.id,
@@ -144,7 +144,9 @@ router.post('/', asyncHandler(async (req, res) => {
       preco: schedule.price,
       status: 'confirmado',
       observacoes: schedule.notes,
-    });
+    }).returning('id');
+    const createdRow = inserted[0];
+    const id = createdRow && typeof createdRow === 'object' ? createdRow.id : createdRow;
     const row = await trx('agendamentos').where({ id }).first();
     return mapAppointment(row, client, service);
   });

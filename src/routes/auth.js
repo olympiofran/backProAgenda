@@ -49,13 +49,15 @@ router.post('/auth/register', asyncHandler(async (req, res) => {
   if (existing) throw new HttpError(409, 'Este e-mail já está cadastrado.');
 
   const senha = await bcrypt.hash(password, 10);
-  const [id] = await db('cadastro').insert({
+  const inserted = await db('cadastro').insert({
     nome: name,
     telefone: phone,
     email,
     senha,
     servico: role,
-  });
+  }).returning('id');
+  const created = inserted[0];
+  const id = created && typeof created === 'object' ? created.id : created;
   const user = await db('cadastro').where({ id }).first();
   res.status(201).json({ token: signToken(user.id), user: mapUser(user) });
 }));
@@ -76,7 +78,7 @@ router.post('/auth/reset-code', asyncHandler(async (req, res) => {
     cadastro_id: user.id,
     codigo_hash: hashCode(code, config.jwtSecret),
     verificado: false,
-    expira_em: db.raw('DATE_ADD(NOW(), INTERVAL 5 MINUTE)'),
+    expira_em: db.raw("NOW() + INTERVAL '5 minutes'"),
   });
 
   if (config.exposeResetCode) payload.demoCode = code;
@@ -102,7 +104,7 @@ router.post('/auth/verify-code', asyncHandler(async (req, res) => {
   const expected = hashCode(code, config.jwtSecret);
   const match = rows.find((row) => safeEqual(row.codigo_hash, expected));
   if (!match) throw new HttpError(400, 'Código inválido ou expirado. Solicite um novo código.');
-  if (!Number(match.vigente)) throw new HttpError(400, 'Código expirado. Solicite um novo código.');
+  if (!match.vigente) throw new HttpError(400, 'Código expirado. Solicite um novo código.');
 
   await db('codigos_recuperacao').where({ id: match.id }).update({ verificado: true });
   res.json({ valid: true });
@@ -120,7 +122,7 @@ router.post('/auth/reset-password', asyncHandler(async (req, res) => {
   if (!user) throw new HttpError(400, 'Código inválido ou expirado. Solicite um novo código.');
 
   const verified = await db('codigos_recuperacao')
-    .where({ cadastro_id: user.id, verificado: 1 })
+    .where({ cadastro_id: user.id, verificado: true })
     .whereRaw('expira_em > NOW()')
     .orderBy('id', 'desc')
     .first();

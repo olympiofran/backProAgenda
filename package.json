@@ -2,12 +2,12 @@
   "name": "back-proagenda",
   "version": "1.0.0",
   "private": true,
-  "description": "API REST do ProAgenda com MySQL",
+  "description": "API REST do ProAgenda com PostgreSQL",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
-    "db:up": "docker compose up -d mysql",
+    "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
     "migrate": "knex migrate:latest",
     "migrate:rollback": "knex migrate:rollback",
@@ -25,6 +25,6 @@
     "express-rate-limit": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "knex": "^3.1.0",
-    "mysql2": "^3.15.3"
+    "pg": "^8.23.1"
   }
 }

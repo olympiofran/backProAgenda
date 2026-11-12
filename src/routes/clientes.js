@@ -66,7 +66,9 @@ router.get('/', asyncHandler(async (req, res) => {
 
 router.post('/', asyncHandler(async (req, res) => {
   const data = readClient(req.body);
-  const [id] = await db('clientes').insert({ ...data, cadastro_id: req.userId });
+  const inserted = await db('clientes').insert({ ...data, cadastro_id: req.userId }).returning('id');
+  const created = inserted[0];
+  const id = created && typeof created === 'object' ? created.id : created;
   const client = await db('clientes').where({ id }).first();
   res.status(201).json(mapClient(client));
 }));
